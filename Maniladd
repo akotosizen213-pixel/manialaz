@@ -1,0 +1,949 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local State = {
+    ESP = false, Aimbot = false, AimbotFOV = 150, AimbotSmoothing = 0.15,
+    BigHead = false, FreeCAM = false, Fling = false, LoopFling = false,
+    PlayerScanner = false, HeadDetector = false, InfinityYield = false,
+    MusicFE = false, AimPart = "Head", ESPColor = Color3.fromRGB(255,255,255),
+    ESPTeamCheck = false, Connections = {}, ESPObjects = {}, FreeCamSpeed = 1,
+    GuiOpen = true,
+}
+
+-- ════════════════════════════════════════════
+--              SCREENGUI
+-- ════════════════════════════════════════════
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NoxinGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.IgnoreGuiInset = true
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui); ScreenGui.Parent = game.CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = game.CoreGui
+end
+
+-- ════════════════════════════════════════════
+--              INTRO
+-- ════════════════════════════════════════════
+local IntroFrame = Instance.new("Frame")
+IntroFrame.Size = UDim2.new(1,0,1,0)
+IntroFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+IntroFrame.BorderSizePixel = 0
+IntroFrame.ZIndex = 100
+IntroFrame.BackgroundTransparency = 1
+IntroFrame.Parent = ScreenGui
+
+local IntroLabel = Instance.new("TextLabel")
+IntroLabel.Size = UDim2.new(0.4,0,0.08,0)
+IntroLabel.Position = UDim2.new(0.3,0,0.44,0)
+IntroLabel.BackgroundTransparency = 1
+IntroLabel.Text = "NOXIN"
+IntroLabel.TextColor3 = Color3.fromRGB(255,255,255)
+IntroLabel.TextScaled = true
+IntroLabel.Font = Enum.Font.GothamBold
+IntroLabel.TextTransparency = 1
+IntroLabel.ZIndex = 102
+IntroLabel.Parent = IntroFrame
+
+local IntroSub = Instance.new("TextLabel")
+IntroSub.Size = UDim2.new(0.3,0,0.04,0)
+IntroSub.Position = UDim2.new(0.35,0,0.52,0)
+IntroSub.BackgroundTransparency = 1
+IntroSub.Text = "Loading..."
+IntroSub.TextColor3 = Color3.fromRGB(160,160,160)
+IntroSub.TextScaled = true
+IntroSub.Font = Enum.Font.Gotham
+IntroSub.TextTransparency = 1
+IntroSub.ZIndex = 102
+IntroSub.Parent = IntroFrame
+
+TweenService:Create(IntroFrame, TweenInfo.new(0.5), {BackgroundTransparency=0}):Play()
+task.wait(0.5)
+TweenService:Create(IntroLabel, TweenInfo.new(0.6), {TextTransparency=0}):Play()
+TweenService:Create(IntroSub, TweenInfo.new(0.6), {TextTransparency=0}):Play()
+task.wait(2.4)
+TweenService:Create(IntroLabel, TweenInfo.new(0.4), {TextTransparency=1}):Play()
+TweenService:Create(IntroSub, TweenInfo.new(0.4), {TextTransparency=1}):Play()
+task.wait(0.4)
+TweenService:Create(IntroFrame, TweenInfo.new(0.4), {BackgroundTransparency=1}):Play()
+task.wait(0.4)
+IntroFrame:Destroy()
+
+-- ════════════════════════════════════════════
+--         ANIMATED GRADIENT BANNER
+-- ════════════════════════════════════════════
+-- Floating open button (shown when GUI is closed)
+local OpenBtn = Instance.new("TextButton")
+OpenBtn.Name = "OpenBtn"
+OpenBtn.Size = UDim2.new(0, 80, 0, 28)
+OpenBtn.Position = UDim2.new(0.5, -40, 0, 8)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+OpenBtn.Text = "NOXIN"
+OpenBtn.TextColor3 = Color3.fromRGB(255,255,255)
+OpenBtn.TextScaled = true
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.BorderSizePixel = 0
+OpenBtn.Visible = false
+OpenBtn.ZIndex = 50
+OpenBtn.Parent = ScreenGui
+Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(0,6)
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(255,255,255)
+OpenStroke.Thickness = 1
+OpenStroke.Parent = OpenBtn
+
+-- ════════════════════════════════════════════
+--         MAIN CONTAINER
+-- ════════════════════════════════════════════
+local MainContainer = Instance.new("Frame")
+MainContainer.Name = "MainContainer"
+MainContainer.Size = UDim2.new(0, 460, 0, 380)
+MainContainer.Position = UDim2.new(0.5, -230, 0.5, -190)
+MainContainer.BackgroundColor3 = Color3.fromRGB(6,6,6)
+MainContainer.BorderSizePixel = 0
+MainContainer.ClipsDescendants = true
+MainContainer.Parent = ScreenGui
+Instance.new("UICorner", MainContainer).CornerRadius = UDim.new(0,10)
+
+-- Animated gradient stroke border
+local GradientFrame = Instance.new("Frame")
+GradientFrame.Name = "GradientBorder"
+GradientFrame.Size = UDim2.new(1,4,1,4)
+GradientFrame.Position = UDim2.new(0,-2,0,-2)
+GradientFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+GradientFrame.BorderSizePixel = 0
+GradientFrame.ZIndex = 0
+GradientFrame.Parent = MainContainer
+Instance.new("UICorner", GradientFrame).CornerRadius = UDim.new(0,11)
+
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,0,0)),
+    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(0.5,  Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(0,0,0)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,0,0)),
+})
+BorderGradient.Rotation = 0
+BorderGradient.Parent = GradientFrame
+
+-- Animate border gradient rotation
+RunService.RenderStepped:Connect(function(dt)
+    BorderGradient.Rotation = (BorderGradient.Rotation + 90 * dt) % 360
+end)
+
+-- Inner mask so border shows as thin ring
+local InnerMask = Instance.new("Frame")
+InnerMask.Size = UDim2.new(1,-4,1,-4)
+InnerMask.Position = UDim2.new(0,2,0,2)
+InnerMask.BackgroundColor3 = Color3.fromRGB(6,6,6)
+InnerMask.BorderSizePixel = 0
+InnerMask.ZIndex = 1
+InnerMask.Parent = MainContainer
+Instance.new("UICorner", InnerMask).CornerRadius = UDim.new(0,9)
+
+-- ════════════════════════════════════════════
+--         TITLE BAR
+-- ════════════════════════════════════════════
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1,0,0,36)
+TitleBar.BackgroundColor3 = Color3.fromRGB(10,10,10)
+TitleBar.BorderSizePixel = 0
+TitleBar.ZIndex = 2
+TitleBar.Parent = MainContainer
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0,10)
+
+-- Gradient on title bar
+local TitleGrad = Instance.new("UIGradient")
+TitleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(0,0,0)),
+    ColorSequenceKeypoint.new(0.4,  Color3.fromRGB(30,30,30)),
+    ColorSequenceKeypoint.new(0.6,  Color3.fromRGB(30,30,30)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(0,0,0)),
+})
+TitleGrad.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0.5,0,1,0)
+TitleLabel.Position = UDim2.new(0.03,0,0,0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "NOXIN"
+TitleLabel.TextColor3 = Color3.fromRGB(255,255,255)
+TitleLabel.TextScaled = true
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 3
+TitleLabel.Parent = TitleBar
+
+-- Animated title gradient text shimmer label overlay
+local TitleShimmer = Instance.new("TextLabel")
+TitleShimmer.Size = UDim2.new(0.5,0,1,0)
+TitleShimmer.Position = UDim2.new(0.03,0,0,0)
+TitleShimmer.BackgroundTransparency = 1
+TitleShimmer.Text = "NOXIN"
+TitleShimmer.TextColor3 = Color3.fromRGB(255,255,255)
+TitleShimmer.TextScaled = true
+TitleShimmer.Font = Enum.Font.GothamBold
+TitleShimmer.TextXAlignment = Enum.TextXAlignment.Left
+TitleShimmer.TextTransparency = 0.5
+TitleShimmer.ZIndex = 4
+TitleShimmer.Parent = TitleBar
+local ShimmerGrad = Instance.new("UIGradient")
+ShimmerGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0,0,0)),
+    ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0)),
+})
+ShimmerGrad.Rotation = 0
+ShimmerGrad.Parent = TitleShimmer
+
+local shimmerOffset = 0
+RunService.RenderStepped:Connect(function(dt)
+    shimmerOffset = (shimmerOffset + 60 * dt) % 360
+    ShimmerGrad.Rotation = shimmerOffset
+end)
+
+-- Close button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0,24,0,24)
+CloseBtn.Position = UDim2.new(1,-30,0.5,-12)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(200,200,200)
+CloseBtn.TextScaled = true
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.BorderSizePixel = 0
+CloseBtn.ZIndex = 5
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0,5)
+local CloseStroke = Instance.new("UIStroke")
+CloseStroke.Color = Color3.fromRGB(60,60,60)
+CloseStroke.Thickness = 1
+CloseStroke.Parent = CloseBtn
+
+-- Minimize button
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0,24,0,24)
+MinBtn.Position = UDim2.new(1,-58,0.5,-12)
+MinBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+MinBtn.Text = "–"
+MinBtn.TextColor3 = Color3.fromRGB(200,200,200)
+MinBtn.TextScaled = true
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.BorderSizePixel = 0
+MinBtn.ZIndex = 5
+MinBtn.Parent = TitleBar
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0,5)
+local MinStroke = Instance.new("UIStroke")
+MinStroke.Color = Color3.fromRGB(60,60,60)
+MinStroke.Thickness = 1
+MinStroke.Parent = MinBtn
+
+-- Drag logic
+local draggingGUI, dragStart, startPos = false, nil, nil
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingGUI = true
+        dragStart = input.Position
+        startPos = MainContainer.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingGUI and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MainContainer.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingGUI = false end
+end)
+
+-- ════════════════════════════════════════════
+--         OPEN / CLOSE LOGIC
+-- ════════════════════════════════════════════
+local function CloseGUI()
+    State.GuiOpen = false
+    TweenService:Create(MainContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0,0,0,0),
+        Position = UDim2.new(
+            MainContainer.Position.X.Scale,
+            MainContainer.Position.X.Offset + 230,
+            MainContainer.Position.Y.Scale,
+            MainContainer.Position.Y.Offset + 190
+        )
+    }):Play()
+    task.wait(0.26)
+    MainContainer.Visible = false
+    OpenBtn.Visible = true
+end
+
+local function OpenGUI()
+    State.GuiOpen = true
+    MainContainer.Visible = true
+    MainContainer.Size = UDim2.new(0,0,0,0)
+    local cx = MainContainer.Position.X.Offset
+    local cy = MainContainer.Position.Y.Offset
+    TweenService:Create(MainContainer, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0,460,0,380),
+    }):Play()
+    OpenBtn.Visible = false
+end
+
+CloseBtn.MouseButton1Click:Connect(CloseGUI)
+MinBtn.MouseButton1Click:Connect(CloseGUI)
+OpenBtn.MouseButton1Click:Connect(OpenGUI)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        if State.GuiOpen then CloseGUI() else OpenGUI() end
+    end
+end)
+
+-- ════════════════════════════════════════════
+--         HORIZONTAL SUB-TAB BAR
+-- ════════════════════════════════════════════
+local SubTabBar = Instance.new("Frame")
+SubTabBar.Size = UDim2.new(1,0,0,30)
+SubTabBar.Position = UDim2.new(0,0,0,36)
+SubTabBar.BackgroundColor3 = Color3.fromRGB(8,8,8)
+SubTabBar.BorderSizePixel = 0
+SubTabBar.ZIndex = 2
+SubTabBar.Parent = MainContainer
+
+local SubTabLayout = Instance.new("UIListLayout")
+SubTabLayout.FillDirection = Enum.FillDirection.Horizontal
+SubTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SubTabLayout.Padding = UDim.new(0,0)
+SubTabLayout.Parent = SubTabBar
+
+local SubTabPad = Instance.new("UIPadding")
+SubTabPad.PaddingLeft = UDim.new(0,4)
+SubTabPad.Parent = SubTabBar
+
+-- Divider line under tab bar
+local TabDivider = Instance.new("Frame")
+TabDivider.Size = UDim2.new(1,0,0,1)
+TabDivider.Position = UDim2.new(0,0,1,-1)
+TabDivider.BackgroundColor3 = Color3.fromRGB(30,30,30)
+TabDivider.BorderSizePixel = 0
+TabDivider.ZIndex = 3
+TabDivider.Parent = SubTabBar
+
+-- Content area
+local ContentArea = Instance.new("Frame")
+ContentArea.Size = UDim2.new(1,0,1,-67)
+ContentArea.Position = UDim2.new(0,0,0,67)
+ContentArea.BackgroundTransparency = 1
+ContentArea.ZIndex = 2
+ContentArea.Parent = MainContainer
+
+-- ════════════════════════════════════════════
+--         TAB SYSTEM
+-- ════════════════════════════════════════════
+local Tabs = {}
+local ActiveTab = nil
+
+local function CreateTab(name, order)
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Name = name.."Tab"
+    TabBtn.Size = UDim2.new(0,70,1,0)
+    TabBtn.BackgroundTransparency = 1
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Color3.fromRGB(80,80,80)
+    TabBtn.TextScaled = true
+    TabBtn.Font = Enum.Font.GothamBold
+    TabBtn.BorderSizePixel = 0
+    TabBtn.LayoutOrder = order
+    TabBtn.ZIndex = 3
+    TabBtn.Parent = SubTabBar
+
+    local Underline = Instance.new("Frame")
+    Underline.Size = UDim2.new(0.7,0,0,2)
+    Underline.Position = UDim2.new(0.15,0,1,-2)
+    Underline.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    Underline.BorderSizePixel = 0
+    Underline.Visible = false
+    Underline.ZIndex = 4
+    Underline.Parent = TabBtn
+    Instance.new("UICorner", Underline).CornerRadius = UDim.new(0,2)
+
+    local TabPage = Instance.new("ScrollingFrame")
+    TabPage.Name = name.."Page"
+    TabPage.Size = UDim2.new(1,0,1,0)
+    TabPage.BackgroundTransparency = 1
+    TabPage.BorderSizePixel = 0
+    TabPage.ScrollBarThickness = 2
+    TabPage.ScrollBarImageColor3 = Color3.fromRGB(60,60,60)
+    TabPage.Visible = false
+    TabPage.ZIndex = 2
+    TabPage.Parent = ContentArea
+
+    local PL = Instance.new("UIListLayout")
+    PL.SortOrder = Enum.SortOrder.LayoutOrder
+    PL.Padding = UDim.new(0,4)
+    PL.Parent = TabPage
+
+    local PP = Instance.new("UIPadding")
+    PP.PaddingLeft = UDim.new(0,10)
+    PP.PaddingTop = UDim.new(0,8)
+    PP.PaddingRight = UDim.new(0,10)
+    PP.Parent = TabPage
+
+    PL:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabPage.CanvasSize = UDim2.new(0,0,0,PL.AbsoluteContentSize.Y+16)
+    end)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        if ActiveTab then
+            Tabs[ActiveTab].Page.Visible = false
+            Tabs[ActiveTab].Btn.TextColor3 = Color3.fromRGB(80,80,80)
+            Tabs[ActiveTab].Underline.Visible = false
+        end
+        ActiveTab = name
+        TabPage.Visible = true
+        TabBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        Underline.Visible = true
+    end)
+
+    Tabs[name] = {Btn=TabBtn, Page=TabPage, Underline=Underline}
+    return TabPage
+end
+
+-- ════════════════════════════════════════════
+--         WIDGET BUILDERS (Monochrome)
+-- ════════════════════════════════════════════
+local function CreateToggle(parent, labelText, defaultVal, callback, order)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1,-6,0,40)
+    Row.BackgroundColor3 = Color3.fromRGB(12,12,12)
+    Row.BorderSizePixel = 0
+    Row.LayoutOrder = order or 0
+    Row.ZIndex = 3
+    Row.Parent = parent
+    Instance.new("UICorner", Row).CornerRadius = UDim.new(0,7)
+    local RowStroke = Instance.new("UIStroke")
+    RowStroke.Color = Color3.fromRGB(28,28,28)
+    RowStroke.Thickness = 1
+    RowStroke.Parent = Row
+
+    local Lbl = Instance.new("TextLabel")
+    Lbl.Size = UDim2.new(0.72,0,1,0)
+    Lbl.Position = UDim2.new(0.03,0,0,0)
+    Lbl.BackgroundTransparency = 1
+    Lbl.Text = labelText
+    Lbl.TextColor3 = Color3.fromRGB(200,200,200)
+    Lbl.TextScaled = true
+    Lbl.Font = Enum.Font.Gotham
+    Lbl.TextXAlignment = Enum.TextXAlignment.Left
+    Lbl.ZIndex = 4
+    Lbl.Parent = Row
+
+    local TogBg = Instance.new("TextButton")
+    TogBg.Size = UDim2.new(0,44,0,22)
+    TogBg.Position = UDim2.new(1,-52,0.5,-11)
+    TogBg.BackgroundColor3 = defaultVal and Color3.fromRGB(255,255,255) or Color3.fromRGB(35,35,35)
+    TogBg.Text = ""
+    TogBg.BorderSizePixel = 0
+    TogBg.ZIndex = 4
+    TogBg.Parent = Row
+    Instance.new("UICorner", TogBg).CornerRadius = UDim.new(0,11)
+
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0,16,0,16)
+    Knob.Position = defaultVal and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8)
+    Knob.BackgroundColor3 = defaultVal and Color3.fromRGB(0,0,0) or Color3.fromRGB(120,120,120)
+    Knob.BorderSizePixel = 0
+    Knob.ZIndex = 5
+    Knob.Parent = TogBg
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(0.5,0)
+
+    local val = defaultVal
+    TogBg.MouseButton1Click:Connect(function()
+        val = not val
+        TweenService:Create(TogBg, TweenInfo.new(0.18), {BackgroundColor3 = val and Color3.fromRGB(255,255,255) or Color3.fromRGB(35,35,35)}):Play()
+        TweenService:Create(Knob, TweenInfo.new(0.18), {
+            Position = val and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
+            BackgroundColor3 = val and Color3.fromRGB(0,0,0) or Color3.fromRGB(120,120,120)
+        }):Play()
+        callback(val)
+    end)
+    return TogBg
+end
+
+local function CreateSlider(parent, labelText, min, max, default, callback, order)
+    local Row = Instance.new("Frame")
+    Row.Size = UDim2.new(1,-6,0,54)
+    Row.BackgroundColor3 = Color3.fromRGB(12,12,12)
+    Row.BorderSizePixel = 0
+    Row.LayoutOrder = order or 0
+    Row.ZIndex = 3
+    Row.Parent = parent
+    Instance.new("UICorner", Row).CornerRadius = UDim.new(0,7)
+    local RowStroke = Instance.new("UIStroke")
+    RowStroke.Color = Color3.fromRGB(28,28,28)
+    RowStroke.Thickness = 1
+    RowStroke.Parent = Row
+
+    local Lbl = Instance.new("TextLabel")
+    Lbl.Size = UDim2.new(0.8,0,0,20)
+    Lbl.Position = UDim2.new(0.03,0,0.08,0)
+    Lbl.BackgroundTransparency = 1
+    Lbl.Text = labelText..": "..tostring(default)
+    Lbl.TextColor3 = Color3.fromRGB(200,200,200)
+    Lbl.TextScaled = true
+    Lbl.Font = Enum.Font.Gotham
+    Lbl.TextXAlignment = Enum.TextXAlignment.Left
+    Lbl.ZIndex = 4
+    Lbl.Parent = Row
+
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(0.92,0,0,5)
+    Track.Position = UDim2.new(0.04,0,0.72,0)
+    Track.BackgroundColor3 = Color3.fromRGB(28,28,28)
+    Track.BorderSizePixel = 0
+    Track.ZIndex = 4
+    Track.Parent = Row
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(0,3)
+
+    local Fill = Instance.new("Frame")
+    Fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
+    Fill.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    Fill.BorderSizePixel = 0
+    Fill.ZIndex = 5
+    Fill.Parent = Track
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(0,3)
+
+    -- Animated gradient on fill
+    local FillGrad = Instance.new("UIGradient")
+    FillGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(80,80,80)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(80,80,80)),
+    })
+    FillGrad.Parent = Fill
+
+    local Knob = Instance.new("TextButton")
+    Knob.Size = UDim2.new(0,12,0,12)
+    Knob.Position = UDim2.new((default-min)/(max-min),-6,0.5,-6)
+    Knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    Knob.Text = ""
+    Knob.BorderSizePixel = 0
+    Knob.ZIndex = 6
+    Knob.Parent = Track
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(0.5,0)
+
+    local dragging = false
+    Knob.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local rel = math.clamp((Mouse.X - Track.AbsolutePosition.X)/Track.AbsoluteSize.X,0,1)
+            local v = math.floor(min+(max-min)*rel)
+            Fill.Size = UDim2.new(rel,0,1,0)
+            Knob.Position = UDim2.new(rel,-6,0.5,-6)
+            Lbl.Text = labelText..": "..tostring(v)
+            callback(v)
+        end
+    end)
+end
+
+local function CreateButton(parent, labelText, callback, order)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1,-6,0,34)
+    Btn.BackgroundColor3 = Color3.fromRGB(18,18,18)
+    Btn.Text = labelText
+    Btn.TextColor3 = Color3.fromRGB(210,210,210)
+    Btn.TextScaled = true
+    Btn.Font = Enum.Font.GothamBold
+    Btn.BorderSizePixel = 0
+    Btn.LayoutOrder = order or 0
+    Btn.ZIndex = 3
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,7)
+    local BtnStroke = Instance.new("UIStroke")
+    BtnStroke.Color = Color3.fromRGB(45,45,45)
+    BtnStroke.Thickness = 1
+    BtnStroke.Parent = Btn
+
+    -- Hover gradient effect
+    local BtnGrad = Instance.new("UIGradient")
+    BtnGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10,10,10)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(22,22,22)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(10,10,10)),
+    })
+    BtnGrad.Parent = Btn
+
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(30,30,30)}):Play()
+        TweenService:Create(BtnStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(100,100,100)}):Play()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(255,255,255)}):Play()
+    end)
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(18,18,18)}):Play()
+        TweenService:Create(BtnStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(45,45,45)}):Play()
+        TweenService:Create(Btn, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(210,210,210)}):Play()
+    end)
+    Btn.MouseButton1Click:Connect(callback)
+    return Btn
+end
+
+local function CreateLabel(parent, text, order)
+    local L = Instance.new("TextLabel")
+    L.Size = UDim2.new(1,-6,0,18)
+    L.BackgroundTransparency = 1
+    L.Text = "  "..text
+    L.TextColor3 = Color3.fromRGB(90,90,90)
+    L.TextScaled = true
+    L.Font = Enum.Font.GothamBold
+    L.TextXAlignment = Enum.TextXAlignment.Left
+    L.LayoutOrder = order or 0
+    L.ZIndex = 3
+    L.Parent = parent
+    -- Animated shimmer on section labels
+    local LGrad = Instance.new("UIGradient")
+    LGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60,60,60)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160,160,160)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(60,60,60)),
+    })
+    LGrad.Rotation = 0
+    LGrad.Parent = L
+    RunService.RenderStepped:Connect(function(dt)
+        LGrad.Offset = Vector2.new(math.sin(tick()*0.8)*0.5, 0)
+    end)
+end
+
+-- ════════════════════════════════════════════
+--         CREATE TABS
+-- ════════════════════════════════════════════
+local MainPage   = CreateTab("MAIN",  1)
+local AimPage    = CreateTab("AIM",   2)
+local VisPage    = CreateTab("VIS",   3)
+local PlyrPage   = CreateTab("PLYR",  4)
+local MiscPage   = CreateTab("MISC",  5)
+local ExecPage   = CreateTab("EXEC",  6)
+
+Tabs["MAIN"].Page.Visible = true
+Tabs["MAIN"].Btn.TextColor3 = Color3.fromRGB(255,255,255)
+Tabs["MAIN"].Underline.Visible = true
+ActiveTab = "MAIN"
+
+-- ════════════════════════════════════════════
+--         ESP SYSTEM
+-- ════════════════════════════════════════════
+local function ClearESP()
+    for _,v in pairs(State.ESPObjects) do
+        if v then for _,obj in pairs(v) do if obj and obj.Remove then obj:Remove() end end end
+    end
+    State.ESPObjects = {}
+end
+
+local function CreateESPForPlayer(player)
+    if player == LocalPlayer then return end
+    local objs = {}
+    local Box = Drawing.new("Square"); Box.Visible=false; Box.Color=Color3.fromRGB(255,255,255); Box.Thickness=1.5; Box.Filled=false; objs.Box=Box
+    local BoxFill = Drawing.new("Square"); BoxFill.Visible=false; BoxFill.Color=Color3.fromRGB(200,200,200); BoxFill.Thickness=1; BoxFill.Filled=true; BoxFill.Transparency=0.88; objs.BoxFill=BoxFill
+    local NameTag = Drawing.new("Text"); NameTag.Visible=false; NameTag.Color=Color3.fromRGB(255,255,255); NameTag.Size=13; NameTag.Center=true; NameTag.Outline=true; NameTag.OutlineColor=Color3.fromRGB(0,0,0); NameTag.Font=Drawing.Fonts.UI; objs.Name=NameTag
+    local DistTag = Drawing.new("Text"); DistTag.Visible=false; DistTag.Color=Color3.fromRGB(180,180,180); DistTag.Size=11; DistTag.Center=true; DistTag.Outline=true; DistTag.OutlineColor=Color3.fromRGB(0,0,0); DistTag.Font=Drawing.Fonts.UI; objs.Dist=DistTag
+    local HPBar = Drawing.new("Square"); HPBar.Visible=false; HPBar.Color=Color3.fromRGB(255,255,255); HPBar.Thickness=1; HPBar.Filled=true; objs.HPBar=HPBar
+    local HPBg = Drawing.new("Square"); HPBg.Visible=false; HPBg.Color=Color3.fromRGB(20,20,20); HPBg.Thickness=1; HPBg.Filled=true; objs.HPBg=HPBg
+    local HeadCircle = Drawing.new("Circle"); HeadCircle.Visible=false; HeadCircle.Color=Color3.fromRGB(255,255,255); HeadCircle.Thickness=1.2; HeadCircle.Filled=false; HeadCircle.NumSides=24; objs.Head=HeadCircle
+    local Tracer = Drawing.new("Line"); Tracer.Visible=false; Tracer.Color=Color3.fromRGB(200,200,200); Tracer.Thickness=1; Tracer.Transparency=0.5; objs.Tracer=Tracer
+    State.ESPObjects[player] = objs
+end
+
+local function RemoveESPForPlayer(player)
+    if State.ESPObjects[player] then
+        for _,obj in pairs(State.ESPObjects[player]) do if obj then obj:Remove() end end
+        State.ESPObjects[player] = nil
+    end
+end
+
+local function UpdateESP()
+    for _,player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not State.ESPObjects[player] then CreateESPForPlayer(player) end
+        local objs = State.ESPObjects[player]
+        local char = player.Character
+        local lchar = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local head = char and char:FindFirstChild("Head")
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        if not State.ESP or not root or not head or not hum or hum.Health<=0 then
+            for _,obj in pairs(objs) do obj.Visible=false end; continue
+        end
+        local headPos,headVis = Camera:WorldToViewportPoint(head.Position)
+        local feetPos = Camera:WorldToViewportPoint(root.Position-Vector3.new(0,3,0))
+        if not headVis then for _,obj in pairs(objs) do obj.Visible=false end; continue end
+        local sx,sy = headPos.X,headPos.Y
+        local bx,by = feetPos.X,feetPos.Y
+        local height = math.abs(by-sy); local width = height*0.55
+        local lroot = lchar and lchar:FindFirstChild("HumanoidRootPart")
+        local dist = (root and lroot) and math.floor((root.Position-lroot.Position).Magnitude) or 0
+        local hpRatio = math.clamp(hum.Health/hum.MaxHealth,0,1)
+        local headRadius = math.max(4,height*0.12)
+        objs.BoxFill.Position=Vector2.new(sx-width/2,sy); objs.BoxFill.Size=Vector2.new(width,height); objs.BoxFill.Visible=true
+        objs.Box.Position=Vector2.new(sx-width/2,sy); objs.Box.Size=Vector2.new(width,height); objs.Box.Visible=true
+        objs.Head.Position=Vector2.new(sx,sy-headRadius); objs.Head.Radius=headRadius; objs.Head.Visible=true
+        objs.Name.Text=player.DisplayName; objs.Name.Position=Vector2.new(sx,sy-headRadius*2-4); objs.Name.Visible=true
+        objs.Dist.Text=dist.."m"; objs.Dist.Position=Vector2.new(sx,by+3); objs.Dist.Visible=true
+        local barX=sx-width/2-7
+        objs.HPBg.Position=Vector2.new(barX-2,sy); objs.HPBg.Size=Vector2.new(4,height); objs.HPBg.Visible=true
+        objs.HPBar.Position=Vector2.new(barX-2,sy+height*(1-hpRatio)); objs.HPBar.Size=Vector2.new(4,height*hpRatio)
+        objs.HPBar.Color=Color3.fromRGB(math.floor(255*(1-hpRatio)),math.floor(255*hpRatio),30); objs.HPBar.Visible=true
+        objs.Tracer.From=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y); objs.Tracer.To=Vector2.new(bx,by); objs.Tracer.Visible=true
+    end
+end
+
+for _,p in pairs(Players:GetPlayers()) do CreateESPForPlayer(p) end
+Players.PlayerAdded:Connect(CreateESPForPlayer)
+Players.PlayerRemoving:Connect(RemoveESPForPlayer)
+RunService.RenderStepped:Connect(UpdateESP)
+
+-- ════════════════════════════════════════════
+--         AIMBOT
+-- ════════════════════════════════════════════
+local AimCircle = Drawing.new("Circle"); AimCircle.Visible=false; AimCircle.Color=Color3.fromRGB(255,255,255); AimCircle.Thickness=1.2; AimCircle.Filled=false; AimCircle.NumSides=64
+local CrossH = Drawing.new("Line"); CrossH.Visible=false; CrossH.Color=Color3.fromRGB(200,200,200); CrossH.Thickness=1.2
+local CrossV = Drawing.new("Line"); CrossV.Visible=false; CrossV.Color=Color3.fromRGB(200,200,200); CrossV.Thickness=1.2
+
+local function GetClosestPlayer()
+    local closest,closestDist=nil,math.huge
+    local center=Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y/2)
+    for _,player in pairs(Players:GetPlayers()) do
+        if player==LocalPlayer then continue end
+        local char=player.Character; local part=char and char:FindFirstChild(State.AimPart)
+        if not part then continue end
+        local screen,vis=Camera:WorldToViewportPoint(part.Position)
+        if not vis then continue end
+        local dist=(Vector2.new(screen.X,screen.Y)-center).Magnitude
+        if dist<State.AimbotFOV and dist<closestDist then closest=part; closestDist=dist end
+    end
+    return closest
+end
+
+RunService.RenderStepped:Connect(function()
+    local cx=Camera.ViewportSize.X/2; local cy=Camera.ViewportSize.Y/2
+    AimCircle.Position=Vector2.new(cx,cy); AimCircle.Radius=State.AimbotFOV; AimCircle.Visible=State.Aimbot
+    CrossH.From=Vector2.new(cx-10,cy); CrossH.To=Vector2.new(cx+10,cy); CrossH.Visible=State.Aimbot
+    CrossV.From=Vector2.new(cx,cy-10); CrossV.To=Vector2.new(cx,cy+10); CrossV.Visible=State.Aimbot
+    if State.Aimbot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local target=GetClosestPlayer()
+        if target then Camera.CFrame=Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position,target.Position),State.AimbotSmoothing) end
+    end
+end)
+
+-- ════════════════════════════════════════════
+--         OTHER SYSTEMS
+-- ════════════════════════════════════════════
+local function ApplyBigHead(enable)
+    for _,player in pairs(Players:GetPlayers()) do
+        if player==LocalPlayer then continue end
+        local char=player.Character
+        if char then local h=char:FindFirstChild("Head"); if h then h.Size=enable and Vector3.new(4,4,4) or Vector3.new(2,1,1) end end
+    end
+end
+
+local FreeCamConn
+local function ToggleFreeCam(enable)
+    if enable then
+        local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed=0 end
+        FreeCamConn=RunService.RenderStepped:Connect(function(dt)
+            local spd=State.FreeCamSpeed*50*dt; local cf=Camera.CFrame
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then Camera.CFrame=cf*CFrame.new(0,0,-spd) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then Camera.CFrame=cf*CFrame.new(0,0,spd) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then Camera.CFrame=cf*CFrame.new(-spd,0,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then Camera.CFrame=cf*CFrame.new(spd,0,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then Camera.CFrame=cf*CFrame.new(0,spd,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then Camera.CFrame=cf*CFrame.new(0,-spd,0) end
+        end)
+    else
+        if FreeCamConn then FreeCamConn:Disconnect() end
+        local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed=16 end
+    end
+end
+
+local FlingConn
+local function FlingPlayer(target)
+    local tc=target.Character; local lc=LocalPlayer.Character
+    if not tc or not lc then return end
+    local tr=tc:FindFirstChild("HumanoidRootPart"); local lr=lc:FindFirstChild("HumanoidRootPart")
+    if not tr or not lr then return end
+    for i=1,10 do lr.CFrame=tr.CFrame; tr.Velocity=Vector3.new(math.random(-500,500),800,math.random(-500,500)); task.wait(0.01) end
+end
+local function FlingAll()
+    for _,p in pairs(Players:GetPlayers()) do if p~=LocalPlayer then task.spawn(FlingPlayer,p) end end
+end
+local function LoopFlingAll()
+    if FlingConn then FlingConn:Disconnect() end
+    if State.LoopFling then FlingConn=RunService.Heartbeat:Connect(FlingAll) end
+end
+
+-- ════════════════════════════════════════════
+--         PLAYER SCANNER
+-- ════════════════════════════════════════════
+local ScannerFrame = Instance.new("Frame")
+ScannerFrame.Size=UDim2.new(0,240,0,280); ScannerFrame.Position=UDim2.new(0,10,0.3,0)
+ScannerFrame.BackgroundColor3=Color3.fromRGB(8,8,8); ScannerFrame.BorderSizePixel=0
+ScannerFrame.Visible=false; ScannerFrame.Active=true; ScannerFrame.Draggable=true; ScannerFrame.ZIndex=10
+ScannerFrame.Parent=ScreenGui
+Instance.new("UICorner",ScannerFrame).CornerRadius=UDim.new(0,8)
+local ScanStroke=Instance.new("UIStroke"); ScanStroke.Color=Color3.fromRGB(40,40,40); ScanStroke.Thickness=1; ScanStroke.Parent=ScannerFrame
+
+local ScanTitle=Instance.new("TextLabel"); ScanTitle.Size=UDim2.new(1,0,0,28)
+ScanTitle.BackgroundColor3=Color3.fromRGB(14,14,14); ScanTitle.Text="  PLAYER SCANNER"
+ScanTitle.TextColor3=Color3.fromRGB(200,200,200); ScanTitle.TextScaled=true; ScanTitle.Font=Enum.Font.GothamBold
+ScanTitle.TextXAlignment=Enum.TextXAlignment.Left; ScanTitle.ZIndex=11; ScanTitle.Parent=ScannerFrame
+Instance.new("UICorner",ScanTitle).CornerRadius=UDim.new(0,8)
+
+local ScanList=Instance.new("ScrollingFrame"); ScanList.Size=UDim2.new(1,-4,1,-32); ScanList.Position=UDim2.new(0,2,0,30)
+ScanList.BackgroundTransparency=1; ScanList.ScrollBarThickness=2; ScanList.ScrollBarImageColor3=Color3.fromRGB(60,60,60); ScanList.ZIndex=11; ScanList.Parent=ScannerFrame
+local ScanLayout=Instance.new("UIListLayout"); ScanLayout.SortOrder=Enum.SortOrder.LayoutOrder; ScanLayout.Padding=UDim.new(0,2); ScanLayout.Parent=ScanList
+ScanLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() ScanList.CanvasSize=UDim2.new(0,0,0,ScanLayout.AbsoluteContentSize.Y+8) end)
+
+local function RefreshScanner()
+    for _,c in pairs(ScanList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    for _,p in pairs(Players:GetPlayers()) do
+        if p==LocalPlayer then continue end
+        local row=Instance.new("Frame"); row.Size=UDim2.new(1,-4,0,50); row.BackgroundColor3=Color3.fromRGB(14,14,14); row.BorderSizePixel=0; row.ZIndex=12; row.Parent=ScanList
+        Instance.new("UICorner",row).CornerRadius=UDim.new(0,5)
+        local nameL=Instance.new("TextLabel"); nameL.Size=UDim2.new(1,-6,0,16); nameL.Position=UDim2.new(0,4,0,3); nameL.BackgroundTransparency=1; nameL.Text="👤 "..p.DisplayName.." (@"..p.Name..")"; nameL.TextColor3=Color3.fromRGB(220,220,220); nameL.TextScaled=true; nameL.Font=Enum.Font.GothamBold; nameL.TextXAlignment=Enum.TextXAlignment.Left; nameL.ZIndex=13; nameL.Parent=row
+        local char=p.Character; local hum=char and char:FindFirstChildOfClass("Humanoid"); local root=char and char:FindFirstChild("HumanoidRootPart")
+        local lchar=LocalPlayer.Character; local lroot=lchar and lchar:FindFirstChild("HumanoidRootPart")
+        local dist=(root and lroot) and math.floor((root.Position-lroot.Position).Magnitude) or "?"
+        local hp=hum and math.floor(hum.Health) or "?"
+        local infoL=Instance.new("TextLabel"); infoL.Size=UDim2.new(1,-6,0,14); infoL.Position=UDim2.new(0,4,0,20); infoL.BackgroundTransparency=1; infoL.Text="HP: "..hp.."  Dist: "..dist.."m  ID: "..p.UserId; infoL.TextColor3=Color3.fromRGB(100,100,100); infoL.TextScaled=true; infoL.Font=Enum.Font.Gotham; infoL.TextXAlignment=Enum.TextXAlignment.Left; infoL.ZIndex=13; infoL.Parent=row
+        local tpBtn=Instance.new("TextButton"); tpBtn.Size=UDim2.new(0,44,0,12); tpBtn.Position=UDim2.new(0,4,1,-15); tpBtn.BackgroundColor3=Color3.fromRGB(25,25,25); tpBtn.Text="TP"; tpBtn.TextColor3=Color3.fromRGB(200,200,200); tpBtn.TextScaled=true; tpBtn.Font=Enum.Font.GothamBold; tpBtn.BorderSizePixel=0; tpBtn.ZIndex=13; tpBtn.Parent=row
+        Instance.new("UICorner",tpBtn).CornerRadius=UDim.new(0,3)
+        tpBtn.MouseButton1Click:Connect(function() local lr=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"); local tr=p.Character and p.Character:FindFirstChild("HumanoidRootPart"); if lr and tr then lr.CFrame=tr.CFrame end end)
+        local fBtn=Instance.new("TextButton"); fBtn.Size=UDim2.new(0,52,0,12); fBtn.Position=UDim2.new(0,52,1,-15); fBtn.BackgroundColor3=Color3.fromRGB(25,25,25); fBtn.Text="FLING"; fBtn.TextColor3=Color3.fromRGB(200,200,200); fBtn.TextScaled=true; fBtn.Font=Enum.Font.GothamBold; fBtn.BorderSizePixel=0; fBtn.ZIndex=13; fBtn.Parent=row
+        Instance.new("UICorner",fBtn).CornerRadius=UDim.new(0,3)
+        fBtn.MouseButton1Click:Connect(function() FlingPlayer(p) end)
+    end
+end
+
+local MusicSound
+local function ToggleMusicFE(enable)
+    if enable then MusicSound=Instance.new("Sound"); MusicSound.SoundId="rbxassetid://1837756504"; MusicSound.Volume=1; MusicSound.Looped=true; MusicSound.Parent=Workspace; MusicSound:Play()
+    else if MusicSound then MusicSound:Stop(); MusicSound:Destroy(); MusicSound=nil end end
+end
+
+local function LoadInfinityYield()
+    if not State.InfinityYield then State.InfinityYield=true; loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))() end
+end
+
+-- ════════════════════════════════════════════
+--         POPULATE TABS
+-- ════════════════════════════════════════════
+-- MAIN
+CreateLabel(MainPage,"◈ COMBAT",1)
+CreateToggle(MainPage,"ESP Players",false,function(v) State.ESP=v; if not v then ClearESP() end end,2)
+CreateToggle(MainPage,"Aimbot",false,function(v) State.Aimbot=v end,3)
+CreateToggle(MainPage,"Big Head",false,function(v) State.BigHead=v; ApplyBigHead(v) end,4)
+CreateLabel(MainPage,"◈ MOVEMENT",5)
+CreateToggle(MainPage,"Free Cam",false,function(v) State.FreeCAM=v; ToggleFreeCam(v) end,6)
+CreateToggle(MainPage,"Loop Fling All",false,function(v) State.LoopFling=v; LoopFlingAll() end,7)
+CreateButton(MainPage,"Fling All (Once)",FlingAll,8)
+CreateLabel(MainPage,"◈ TOOLS",9)
+CreateToggle(MainPage,"Player Scanner",false,function(v) State.PlayerScanner=v; ScannerFrame.Visible=v; if v then RefreshScanner() end end,10)
+CreateToggle(MainPage,"Infinity Yield",false,function(v) if v then LoadInfinityYield() end end,11)
+CreateToggle(MainPage,"Music FE",false,function(v) State.MusicFE=v; ToggleMusicFE(v) end,12)
+
+-- AIM
+CreateLabel(AimPage,"◈ AIMBOT CONFIG",1)
+CreateToggle(AimPage,"Aimbot Active",false,function(v) State.Aimbot=v end,2)
+CreateSlider(AimPage,"FOV Radius",50,500,150,function(v) State.AimbotFOV=v end,3)
+CreateSlider(AimPage,"Smoothing (x10)",1,20,2,function(v) State.AimbotSmoothing=v/100 end,4)
+CreateLabel(AimPage,"◈ AIM PART",5)
+for i,part in ipairs({"Head","HumanoidRootPart","UpperTorso","LowerTorso"}) do
+    CreateButton(AimPage,"Target: "..part,function() State.AimPart=part end,5+i)
+end
+
+-- VIS
+CreateLabel(VisPage,"◈ ESP SETTINGS",1)
+CreateToggle(VisPage,"ESP Toggle",false,function(v) State.ESP=v end,2)
+CreateToggle(VisPage,"Head Detector",false,function(v) State.HeadDetector=v end,3)
+CreateToggle(VisPage,"Team Check",false,function(v) State.ESPTeamCheck=v end,4)
+CreateLabel(VisPage,"◈ ESP COLOR",5)
+for i,c in ipairs({{"White",Color3.fromRGB(255,255,255)},{"Gray",Color3.fromRGB(160,160,160)},{"Cyan",Color3.fromRGB(180,255,255)},{"Green",Color3.fromRGB(180,255,180)},{"Yellow",Color3.fromRGB(255,255,180)}}) do
+    CreateButton(VisPage,"Color: "..c[1],function()
+        State.ESPColor=c[2]
+        for _,objs in pairs(State.ESPObjects) do
+            if objs.Box then objs.Box.Color=c[2] end
+            if objs.Head then objs.Head.Color=c[2] end
+            if objs.Tracer then objs.Tracer.Color=c[2] end
+        end
+    end,5+i)
+end
+
+-- PLYR
+CreateLabel(PlyrPage,"◈ PLAYER LIST",1)
+CreateButton(PlyrPage,"Refresh Scanner",function() RefreshScanner() end,2)
+CreateButton(PlyrPage,"TP to Random Player",function()
+    local list={}; for _,p in pairs(Players:GetPlayers()) do if p~=LocalPlayer then table.insert(list,p) end end
+    if #list>0 then local t=list[math.random(1,#list)]; local lr=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"); local tr=t.Character and t.Character:FindFirstChild("HumanoidRootPart"); if lr and tr then lr.CFrame=tr.CFrame end end
+end,3)
+CreateButton(PlyrPage,"Fling All Players",FlingAll,4)
+CreateLabel(PlyrPage,"◈ SELF",5)
+CreateToggle(PlyrPage,"Big Head (Self)",false,function(v) local h=LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head"); if h then h.Size=v and Vector3.new(4,4,4) or Vector3.new(2,1,1) end end,6)
+CreateSlider(PlyrPage,"WalkSpeed",16,300,16,function(v) local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if hum then hum.WalkSpeed=v end end,7)
+CreateSlider(PlyrPage,"JumpPower",50,500,50,function(v) local hum=LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid"); if hum then hum.JumpPower=v end end,8)
+
+-- MISC
+CreateLabel(MiscPage,"◈ MISC",1)
+CreateToggle(MiscPage,"Loop Fling",false,function(v) State.LoopFling=v; LoopFlingAll() end,2)
+CreateToggle(MiscPage,"Free Cam",false,function(v) State.FreeCAM=v; ToggleFreeCam(v) end,3)
+CreateSlider(MiscPage,"FreeCam Speed",1,10,1,function(v) State.FreeCamSpeed=v end,4)
+CreateToggle(MiscPage,"Music FE",false,function(v) State.MusicFE=v; ToggleMusicFE(v) end,5)
+CreateButton(MiscPage,"Load Infinity Yield",LoadInfinityYield,6)
+
+-- EXEC
+CreateLabel(ExecPage,"◈ NOXIN EXECUTOR",1)
+local ExecBg=Instance.new("Frame"); ExecBg.Size=UDim2.new(1,-6,0,160); ExecBg.BackgroundColor3=Color3.fromRGB(10,10,10); ExecBg.BorderSizePixel=0; ExecBg.LayoutOrder=2; ExecBg.ZIndex=3; ExecBg.Parent=ExecPage
+Instance.new("UICorner",ExecBg).CornerRadius=UDim.new(0,7)
+local ExecStroke=Instance.new("UIStroke"); ExecStroke.Color=Color3.fromRGB(30,30,30); ExecStroke.Thickness=1; ExecStroke.Parent=ExecBg
+local ExecBox=Instance.new("TextBox"); ExecBox.Size=UDim2.new(1,-8,1,-8); ExecBox.Position=UDim2.new(0,4,0,4); ExecBox.BackgroundTransparency=1; ExecBox.Text="-- Paste your Lua script here"; ExecBox.TextColor3=Color3.fromRGB(180,180,180); ExecBox.TextScaled=false; ExecBox.TextSize=12; ExecBox.Font=Enum.Font.Code; ExecBox.MultiLine=true; ExecBox.TextXAlignment=Enum.TextXAlignment.Left; ExecBox.TextYAlignment=Enum.TextYAlignment.Top; ExecBox.ClearTextOnFocus=false; ExecBox.ZIndex=4; ExecBox.Parent=ExecBg
+local OutBg=Instance.new("Frame"); OutBg.Size=UDim2.new(1,-6,0,36); OutBg.BackgroundColor3=Color3.fromRGB(10,10,10); OutBg.BorderSizePixel=0; OutBg.LayoutOrder=3; OutBg.ZIndex=3; OutBg.Parent=ExecPage
+Instance.new("UICorner",OutBg).CornerRadius=UDim.new(0,7)
+local OutLbl=Instance.new("TextLabel"); OutLbl.Size=UDim2.new(1,-6,1,0); OutLbl.Position=UDim2.new(0,4,0,0); OutLbl.BackgroundTransparency=1; OutLbl.Text="Output: Ready"; OutLbl.TextColor3=Color3.fromRGB(100,100,100); OutLbl.TextScaled=true; OutLbl.Font=Enum.Font.Code; OutLbl.TextXAlignment=Enum.TextXAlignment.Left; OutLbl.ZIndex=4; OutLbl.Parent=OutBg
+local ExecRow=Instance.new("Frame"); ExecRow.Size=UDim2.new(1,-6,0,30); ExecRow.BackgroundTransparency=1; ExecRow.LayoutOrder=4; ExecRow.ZIndex=3; ExecRow.Parent=ExecPage
+local ExecBtn=Instance.new("TextButton"); ExecBtn.Size=UDim2.new(0.48,0,1,0); ExecBtn.BackgroundColor3=Color3.fromRGB(20,20,20); ExecBtn.Text="Execute"; ExecBtn.TextColor3=Color3.fromRGB(220,220,220); ExecBtn.TextScaled=true; ExecBtn.Font=Enum.Font.GothamBold; ExecBtn.BorderSizePixel=0; ExecBtn.ZIndex=4; ExecBtn.Parent=ExecRow
+Instance.new("UICorner",ExecBtn).CornerRadius=UDim.new(0,7)
+local ExBtnStroke=Instance.new("UIStroke"); ExBtnStroke.Color=Color3.fromRGB(60,60,60); ExBtnStroke.Thickness=1; ExBtnStroke.Parent=ExecBtn
+local ClrBtn=Instance.new("TextButton"); ClrBtn.Size=UDim2.new(0.48,0,1,0); ClrBtn.Position=UDim2.new(0.52,0,0,0); ClrBtn.BackgroundColor3=Color3.fromRGB(14,14,14); ClrBtn.Text="Clear"; ClrBtn.TextColor3=Color3.fromRGB(140,140,140); ClrBtn.TextScaled=true; ClrBtn.Font=Enum.Font.GothamBold; ClrBtn.BorderSizePixel=0; ClrBtn.ZIndex=4; ClrBtn.Parent=ExecRow
+Instance.new("UICorner",ClrBtn).CornerRadius=UDim.new(0,7)
+local ClrStroke=Instance.new("UIStroke"); ClrStroke.Color=Color3.fromRGB(35,35,35); ClrStroke.Thickness=1; ClrStroke.Parent=ClrBtn
+ExecBtn.MouseButton1Click:Connect(function()
+    local code=ExecBox.Text
+    if code=="" or code=="-- Paste your Lua script here" then OutLbl.Text="Output: No script provided."; return end
+    local ok,err=pcall(loadstring(code))
+    if ok then OutLbl.Text="Output: Executed successfully ✓"; OutLbl.TextColor3=Color3.fromRGB(200,255,200)
+    else OutLbl.Text="Error: "..tostring(err); OutLbl.TextColor3=Color3.fromRGB(255,160,160) end
+end)
+ClrBtn.MouseButton1Click:Connect(function() ExecBox.Text="-- Paste your Lua script here"; OutLbl.Text="Output: Ready"; OutLbl.TextColor3=Color3.fromRGB(100,100,100) end)
+
+-- ════════════════════════════════════════════
+--         SHOW GUI
+-- ════════════════════════════════════════════
+MainContainer.Visible = true
+print("[NOXIN] Loaded — RightShift to toggle.")
